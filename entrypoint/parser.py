@@ -6,14 +6,20 @@ from expression_functions.term import Term
 
 class ParsedTree:
 
-    def __init__(self, expression):
+    def __init__(self, expression, function_list, variable_list):
 
         print("New expression \n ============================\n")
+
+        self.function_list = function_list
+        self.variable_list = variable_list
+
+        self.func_variable_count_dict = {}
 
         self.handler_functions = [self.open_bracket, self.comma ,self.closed_bracket]
 
         self.error_logs = {0: "Expression is empty", 1: "Parantheses missing",
-                           2: "Extra parantheses added", 3: "Variable Missing"}
+                           2: "Extra parantheses added", 3: "Variable Missing",
+                           4:"Number of arguments per function differ"}
 
         self.delim = {'(': 0,
             ',': 1,
@@ -25,6 +31,16 @@ class ParsedTree:
 
         self.parse_expression()
         self.get_root()
+
+    def func_num_of_variables(self, func_term, num_of_children):
+
+        if func_term.expr in self.func_variable_count_dict.keys():
+            if self.func_variable_count_dict[func_term.expr] != num_of_children:
+                print(self.error_logs[4])
+                sys.exit(0)
+        else:
+            self.func_variable_count_dict[func_term.expr] = num_of_children
+
 
     def create_term(self, sub_expr, index):
         """create a new term from a subexpression"""
@@ -52,8 +68,13 @@ class ParsedTree:
 
     def closed_bracket(self, sub_expr, index):
         """if a closed bracket is detected than the the end of a term is detected"""
+
+        self.func_num_of_variables(self.crr, len(self.crr.children))
+
         if sub_expr:
             new_term = Term(sub_expr, self.crr)
+            # Update the number of children the function had when it was first encountered
+
             self.crr.update_children(new_term)
 
         if self.crr:
@@ -72,7 +93,7 @@ class ParsedTree:
 
         print("The new expression is: " + new_expr + "\n")
 
-        substitute_tree = ParsedTree(new_expr)
+        substitute_tree = ParsedTree(new_expr, [], [])
         return substitute_tree
 
     def log_error_and_close(self,error_code):
@@ -117,7 +138,7 @@ class ParsedTree:
     def parse_expression(self):
         """parse the expression if it is correct and break it into terms"""
         if self.check_validity() != 0:
-            print("The expression: " + self.expression + " is correct")
+            #print("The expression: " + self.expression + " is correct")
             print("Begin parsing")
 
         sub_expr = ""
