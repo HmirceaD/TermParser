@@ -6,10 +6,12 @@ from expression_functions.term import Term
 
 class ParsedTree:
 
-    def __init__(self, expression, function_list, variable_list):
+    def __init__(self, expression, function_list, variable_list, substition_variable_list, substition_function_list):
 
         print("New expression \n ============================\n")
 
+        self.substition_variable_list = substition_variable_list
+        self.substition_function_list = substition_function_list
         self.function_list = function_list
         self.variable_list = variable_list
 
@@ -86,15 +88,18 @@ class ParsedTree:
 
     def substitute__term(self, substitution_map, expr):
         """Recursivelly substitute in the tree from a map of substitute terms"""
-        new_expr = expr
-        for key in substitution_map.keys():
-            new_expr = new_expr.replace(key, substitution_map[key])
-            print("The term: " + key + " has been replaced with: " +substitution_map[key])
+        #TODO AM RAMAS ACI
+        if self.check_correct_substitution(substitution_map):
 
-        print("The new expression is: " + new_expr + "\n")
+            new_expr = expr
+            for key in substitution_map.keys():
+                new_expr = new_expr.replace(key, substitution_map[key])
+                print("The term: " + key + " has been replaced with: " +substitution_map[key])
 
-        substitute_tree = ParsedTree(new_expr, [], [])
-        return substitute_tree
+            print("The new expression is: " + new_expr + "\n")
+
+            substitute_tree = ParsedTree(new_expr, self.function_list, self.variable_list, self.substition_variable_list, self.substition_function_list)
+            return substitute_tree
 
     def log_error_and_close(self,error_code):
         """Log all errors and close this section"""
@@ -163,3 +168,48 @@ class ParsedTree:
     def get_root(self):
         """return current root of the program"""
         print("The root is: " + self.root.expr + "()\n")
+
+    def get_first_item_before_open_bracket(self, expr):
+        if expr[expr.find('(')-1] == expr[len(expr)-1]:
+            print("Function is badly defined")
+            sys.exit(0)
+        else:
+            return expr[expr.find('(')-1]
+
+    def check_correct_substitution(self, subst_map):
+
+        pre_subst = subst_map.keys()
+        post_subst = []
+
+        for p_temp in subst_map.values():
+
+            if p_temp.find('(') != -1:
+                post_subst.append(p_temp[p_temp.find('(')-1] + '-')
+            else:
+                post_subst.append(p_temp)
+
+        for index, p_temp in enumerate(post_subst):
+            if p_temp.find('-') != -1:
+                p_temp = p_temp.replace('-','')
+
+                if p_temp in pre_subst:
+                    print("Cannot have a variable and a function with the same notation")
+                    sys.exit(0)
+                post_subst[index] = p_temp
+
+        for s in pre_subst:
+            if s not in self.substition_variable_list:
+                print("Variable to be substituted not defined")
+                sys.exit(0)
+
+            if s.find('(') != -1:
+                print("A function cannot be the target of a substitution")
+                sys.exit(0)
+
+        for p in post_subst:
+            print(p)
+            if p not in self.substition_variable_list and p not in self.substition_function_list:
+                print("Variable or function to be substituted not defined")
+                sys.exit(0)
+
+        return 1
