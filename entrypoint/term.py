@@ -2,12 +2,19 @@
 
 class Term:
 
-    def __init__(self, expr, parent):
+    def __init__(self, expr, parent, term_type):
         """pointer to the parent term, the contents formed from the subexpression
         and a list for the potential children"""
         self.parent = parent
         self.expr = expr
+        self.term_type = term_type
         self.children = []
+
+    def get_children_list(self):
+        return self.children
+
+    def get_node_type(self):
+        return self.term_type
 
     def update_children(self, child):
         """add a new child to the term"""
@@ -53,3 +60,17 @@ class Term:
                    self.recursive_form_tree("", pos)
         else:
             return self.expr + self.get_level() + "\n" + self.recursive_form_tree("", pos)
+
+    def print_expression(self):
+        string = self.expr
+
+        if len(self.children) > 0:
+            string = string + "("
+            delimitator = ""
+            for child in self.children:
+                string = string + delimitator + \
+                         child.print_expression()
+                delimitator = ","
+            string = string + ")"
+
+        return string

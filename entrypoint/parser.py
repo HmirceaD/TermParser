@@ -2,11 +2,11 @@
 import sys
 sys.path.append('../')
 
-from expression_functions.term import Term
+from entrypoint.term import Term
 
 class ParsedTree:
 
-    def __init__(self, expression, function_list, variable_list, substition_variable_list, substition_function_list):
+    def __init__(self, expression, function_list, variable_list, substition_variable_list, substition_function_list, constant_list):
 
         print("New expression \n ============================\n")
 
@@ -14,7 +14,7 @@ class ParsedTree:
         self.substition_function_list = substition_function_list
         self.function_list = function_list
         self.variable_list = variable_list
-
+        self.constant_list = constant_list
         self.func_variable_count_dict = {}
 
         self.handler_functions = [self.open_bracket, self.comma ,self.closed_bracket]
@@ -46,7 +46,7 @@ class ParsedTree:
 
     def create_term(self, sub_expr, index):
         """create a new term from a subexpression"""
-        term = Term(sub_expr, self.crr)
+        term = Term(sub_expr, self.crr, self.get_term_type(sub_expr))
 
         if self.root is None:
             self.root = term
@@ -62,10 +62,20 @@ class ParsedTree:
 
         self.crr = term
 
+    def get_term_type(self, sub_expr):
+        term_type = ""
+        if sub_expr.strip() in self.variable_list:
+            term_type = "VARIABLE"
+        elif sub_expr.strip() in self.function_list:
+            term_type = "FUNCTION"
+
+        return term_type
+
     def comma(self, sub_expr, index):
         """if a comma is detected the a child in the previous parent is detected"""
         if sub_expr:
-            new_term = Term(sub_expr, self.crr)
+
+            new_term = Term(sub_expr, self.crr, self.get_term_type(sub_expr))
             self.crr.update_children(new_term)
 
     def closed_bracket(self, sub_expr, index):
@@ -74,7 +84,7 @@ class ParsedTree:
         self.func_num_of_variables(self.crr, len(self.crr.children))
 
         if sub_expr:
-            new_term = Term(sub_expr, self.crr)
+            new_term = Term(sub_expr, self.crr, self.get_term_type(sub_expr))
             # Update the number of children the function had when it was first encountered
 
             self.crr.update_children(new_term)
@@ -88,7 +98,7 @@ class ParsedTree:
 
     def substitute__term(self, substitution_map, expr):
         """Recursivelly substitute in the tree from a map of substitute terms"""
-        #TODO AM RAMAS ACI
+
         if self.check_correct_substitution(substitution_map):
 
             new_expr = expr
@@ -98,7 +108,7 @@ class ParsedTree:
 
             print("The new expression is: " + new_expr + "\n")
 
-            substitute_tree = ParsedTree(new_expr, self.function_list, self.variable_list, self.substition_variable_list, self.substition_function_list)
+            substitute_tree = ParsedTree(new_expr, self.function_list, self.variable_list, self.substition_variable_list, self.substition_function_list, self.constant_list)
             return substitute_tree
 
     def log_error_and_close(self,error_code):
@@ -157,6 +167,18 @@ class ParsedTree:
             else:
                 sub_expr = sub_expr + ch
 
+        if len(sub_expr) > 0 and self.root is None:
+            # for the case when the expression has no delimitators
+            self.create_term(sub_expr, i)
+
+        if self.crr is not None:
+            print("Current", self.crr)
+            print("Root", self.root)
+
+            # If parsing stops at a term which is not the root, then it did not
+            # close all the parentheses / did not make its way back to the top.
+            print("Invalid expression. Try closing all parentheses.")
+            return False
 
     def print_tree(self):
         """helper function to print the tree from root"""
@@ -164,6 +186,9 @@ class ParsedTree:
 
         if self.root:
             print(self.root.tree_string(True))
+
+    def get_root_func(self):
+        return self.root
 
     def get_root(self):
         """return current root of the program"""
@@ -198,7 +223,7 @@ class ParsedTree:
                 post_subst[index] = p_temp
 
         for s in pre_subst:
-            if s not in self.substition_variable_list:
+            if s not in self.substition_variable_list and s not in self.constant_list:
                 print("Variable to be substituted not defined")
                 sys.exit(0)
 
@@ -208,7 +233,7 @@ class ParsedTree:
 
         for p in post_subst:
             print(p)
-            if p not in self.substition_variable_list and p not in self.substition_function_list:
+            if p not in self.substition_variable_list and p not in self.substition_function_list and p not in self.constant_list:
                 print("Variable or function to be substituted not defined")
                 sys.exit(0)
 
